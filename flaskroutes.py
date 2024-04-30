@@ -204,5 +204,5 @@ def calculate_cagr():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=433)
+    app.run()
 
