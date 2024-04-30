@@ -5,3 +5,4 @@ flask-Cors
 nse
 jugaad_data
 werkzeug==2.2.2
+pyopenssl
