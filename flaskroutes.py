@@ -162,6 +162,47 @@ def calculate_stocks():
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+    
+@app.route('/calculate_cagr', methods=['POST'])
+def calculate_cagr():
+    try:
+        data = request.json['stocks']
+        nse = NSELive()
+        current_date = date.today()
+        one_year_ago = current_date - timedelta(days=365)
+
+        current_value = 0
+        value_one_year_ago = 0
+
+        for stock in data:
+            symbol = stock['symbol']
+            qty = stock['qty']
+            avg_price = stock['avg_price']
+
+            stock_quote = nse.stock_quote(symbol)
+            price_info = stock_quote['priceInfo']
+            # print (price_info)
+            current_price = price_info['lastPrice']
+
+            current_value += qty * current_price
+
+
+            historical_data = stock_df(symbol=symbol, from_date=one_year_ago-timedelta(3), to_date=one_year_ago, series="EQ")
+            print (historical_data)
+            if not historical_data.empty:
+                value_one_year_ago += qty * historical_data.iloc[-1]["CLOSE"]
+
+        cagr = ((current_value / value_one_year_ago) ** (1/1) - 1) * 100  # CAGR formula assuming one year
+
+        return jsonify({
+            'current_value': round(current_value, 2),
+            'value_one_year_ago': round(value_one_year_ago, 2),
+            'cagr': round(cagr, 2)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
 
 if __name__ == "__main__":
     app.run(debug=True)
+
