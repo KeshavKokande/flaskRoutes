@@ -1,12 +1,10 @@
 werkzeug==2.2.2
-flask[async]
+flask
 gunicorn
 jsonify
 requests
 flask-Cors
 nse
-gunicorn
-asyncio
 pandas
 jugaad_data
 pyopenssl
