@@ -1,8 +1,9 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from nse import NSE
 from datetime import date, timedelta
+from nse import NSE
 from jugaad_data.nse import stock_df, NSELive
+import asyncio
 
 # Working directory
 DIR = "/content"
@@ -10,10 +11,9 @@ DIR = "/content"
 app = Flask(__name__)
 CORS(app)
 
-@app.route("/get_symbol_lastprice", methods=["GET"])
-def get_symbol_lastprice():
+async def get_symbol_lastprice_async():
     nse = NSE(download_folder=DIR)
-    status = nse.listFnoStocks()
+    status = await asyncio.to_thread(nse.listFnoStocks)
     data = status["data"]
 
     symbol_lastprice = {}
@@ -22,9 +22,11 @@ def get_symbol_lastprice():
 
     return jsonify(symbol_lastprice)
 
+@app.route("/get_symbol_lastprice", methods=["GET"])
+async def get_symbol_lastprice():
+    return await get_symbol_lastprice_async()
 
-
-def get_total_close_price(stocks, num_days):
+async def get_total_close_price_async(stocks, num_days):
     end_date = date.today()
     start_date = end_date - timedelta(days=num_days)
 
@@ -33,7 +35,7 @@ def get_total_close_price(stocks, num_days):
 
     # Fetch historical data for each stock once
     for symbol in stocks:
-        historical_data[symbol] = stock_df(symbol=symbol, from_date=start_date, to_date=end_date + timedelta(days=1), series="EQ")
+        historical_data[symbol] = await asyncio.to_thread(stock_df, symbol=symbol, from_date=start_date, to_date=end_date + timedelta(days=1), series="EQ")
 
     for day_delta in range(num_days):
         current_date = start_date + timedelta(days=day_delta)
@@ -55,7 +57,7 @@ def get_total_close_price(stocks, num_days):
     return [{"date": date, "total_value": value} for date, value in total_close_price_by_date.items()]
 
 @app.route("/calculate_total_value", methods=["POST"])
-def calculate_total_value():
+async def calculate_total_value():
     request_data = request.get_json()
 
     stocks = request_data.get("stocks", {})
@@ -67,11 +69,11 @@ def calculate_total_value():
     if not isinstance(stocks, dict) or not stocks:
         return jsonify({"error": "Invalid or empty stocks data"}), 400
 
-    result = get_total_close_price(stocks, num_days)
+    result = await get_total_close_price_async(stocks, num_days)
     return jsonify(result)
 
 @app.route('/calculate_sts', methods=['POST'])
-def calculate_sts():
+async def calculate_sts():
     try:
         plans_data = request.json['plans_data']
         response_data = []
@@ -85,7 +87,7 @@ def calculate_sts():
                 qty = stock['qty']
                 avg_price = stock['price']
 
-                stock_quote = nse.stock_quote(symbol)
+                stock_quote = await asyncio.to_thread(nse.stock_quote, symbol)
                 price_info = stock_quote['priceInfo']
 
                 current_price = price_info['lastPrice']
@@ -121,9 +123,9 @@ def calculate_sts():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-    
+
 @app.route('/calculate', methods=['POST'])
-def calculate_stocks():
+async def calculate_stocks():
     try:
         data = request.json['stocks']
         results = []
@@ -134,12 +136,11 @@ def calculate_stocks():
             qty = stock['qty']
             avg_price = stock['avg_price']
 
-            stock_quote = nse.stock_quote(symbol)
+            stock_quote = await asyncio.to_thread(nse.stock_quote, symbol)
             price_info = stock_quote['priceInfo']
             current_price = price_info['lastPrice']
             previous_close = price_info['previousClose']
             close_price = price_info['close']
-
 
             if current_price == 0 or previous_close == 0:
                 today_change_percent = 0
@@ -164,9 +165,9 @@ def calculate_stocks():
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-    
+
 @app.route('/calculate_cagr', methods=['POST'])
-def calculate_cagr():
+async def calculate_cagr():
     try:
         data = request.json['stocks']
         nse = NSELive()
@@ -181,16 +182,15 @@ def calculate_cagr():
             qty = stock['qty']
             avg_price = stock['avg_price']
 
-            stock_quote = nse.stock_quote(symbol)
+            stock_quote = await asyncio.to_thread(nse.stock_quote, symbol)
             price_info = stock_quote['priceInfo']
-            # print (price_info)
+            
             current_price = price_info['lastPrice']
 
             current_value += qty * current_price
 
+            historical_data = await asyncio.to_thread(stock_df, symbol=symbol, from_date=one_year_ago-timedelta(3), to_date=one_year_ago, series="EQ")
 
-            historical_data = stock_df(symbol=symbol, from_date=one_year_ago-timedelta(3), to_date=one_year_ago, series="EQ")
-            print (historical_data)
             if not historical_data.empty:
                 value_one_year_ago += qty * historical_data.iloc[-1]["CLOSE"]
 
@@ -204,7 +204,5 @@ def calculate_cagr():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-
 if __name__ == "__main__":
     app.run(threaded=True)
-
