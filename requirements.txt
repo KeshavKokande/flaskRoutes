@@ -5,6 +5,7 @@ jsonify
 requests
 flask-Cors
 nse
+asyncio
 pandas
 jugaad_data
 pyopenssl
