@@ -104,7 +104,9 @@ def calculate_sts():
                     'symbol': symbol,
                     'today_change_percent': round(today_change_percent, 2),
                     'total_change_percent': round(total_change_percent, 2),
-                    'current_value': round(qty * current_price, 2)
+                    'current_value': round(qty * current_price, 2),
+                    'total_current_value': round((total_current_value + plan['cash']),2),
+                    'initial_value': round(plan['startVal'])
                 })
 
             total_current_value = sum(stock['current_value'] for stock in results)
