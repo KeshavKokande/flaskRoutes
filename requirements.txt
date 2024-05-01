@@ -1,5 +1,5 @@
 werkzeug==2.2.2
-flask
+flask[async]
 gunicorn
 jsonify
 requests
