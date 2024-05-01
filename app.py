@@ -104,9 +104,7 @@ def calculate_sts():
                     'symbol': symbol,
                     'today_change_percent': round(today_change_percent, 2),
                     'total_change_percent': round(total_change_percent, 2),
-                    'current_value': round(qty * current_price, 2),
-                    'total_current_value': round((total_current_value + plan['cash']),2),
-                    'initial_value': round(plan['startVal'])
+                    'current_value': round(qty * current_price, 2)
                 })
 
             total_current_value = sum(stock['current_value'] for stock in results)
@@ -114,7 +112,9 @@ def calculate_sts():
             response_data.append({
                 'planName': plan['planName'],
                 'individual_stocks': results,
-                'total_current_gains': round(((total_current_value + plan["cash"] - plan['startVal']) / plan['startVal']) * 100, 2)
+                'total_current_gains': round(((total_current_value + plan["cash"] - plan['startVal']) / plan['startVal']) * 100, 2),
+                'total_current_value': round((total_current_value + plan['cash']),2),
+                'initial_value': round(plan['startVal'])
             })
 
         return jsonify({'plans_data': response_data}), 200
